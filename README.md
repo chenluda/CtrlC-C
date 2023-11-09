@@ -5,3 +5,5 @@
     <img alt="Status" src="https://img.shields.io/badge/Status-Updating-green" />
   </a>
 </div>
+
+下载即用：https://github.com/chenluda/CtrlC-C/releases
