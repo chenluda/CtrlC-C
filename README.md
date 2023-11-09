@@ -5,5 +5,8 @@
     <img alt="Status" src="https://img.shields.io/badge/Status-Updating-green" />
   </a>
 </div>
+<div align="center">
+  <img src="https://github.com/chenluda/CtrlC-C/assets/45784833/106bb480-bae1-41c9-958c-367859e6c136" width="20%" height="20%"/>
+</div>
 
-下载即用：https://github.com/chenluda/CtrlC-C/releases
+
