@@ -11,6 +11,33 @@ import winreg as reg
 import win32event
 import win32api
 from winerror import ERROR_ALREADY_EXISTS
+import logging
+import subprocess
+
+
+def get_log_file_path():
+    """Get the path for the log file, differentiating between script and executable."""
+    if getattr(sys, 'frozen', False):
+        home_dir = os.path.expanduser('~')
+        log_dir = os.path.join(home_dir, 'ctrlcc')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        return os.path.join(log_dir, 'CtrlC_C_log.txt')
+    else:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CtrlC_C_log.txt')
+
+
+def view_logs(icon, item):
+    """Open the log file with the default text editor."""
+    try:
+        if os.name == 'nt':  # Windows
+            os.startfile(log_filepath)
+        elif os.name == 'posix':  # Unix-like
+            subprocess.run(['open', log_filepath], check=True)
+        else:
+            logging.error("Unsupported OS for viewing logs")
+    except Exception as e:
+        logging.error(f"Error opening log file: {e}")
 
 
 def add_to_startup():
@@ -72,12 +99,24 @@ def show_message_box(title, message):
 
 def strip_newlines(text):
     """Remove all types of newline characters from a string."""
-    return text.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+    try:
+        text = text.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+        logging.info(f"Copied text: {text}")  # Log the copied text
+        return text
+    except Exception as e:
+        logging.error(f"Error while accessing clipboard: {e}")
+        return ""
 
 
 def get_clipboard_text():
-    """Get the current text on the clipboard."""
-    return pyperclip.paste()
+    """Get the current text on the clipboard and then clear it."""
+    try:
+        text = pyperclip.paste()
+        pyperclip.copy("")  # Clear the clipboard
+        return text
+    except Exception as e:
+        logging.error(f"Error while accessing clipboard: {e}")
+        return ""
 
 
 def set_clipboard_text(text):
@@ -118,12 +157,15 @@ def perform_clipboard_action():
     """Perform the action of copying the clipboard text and removing newlines."""
     global strip_newlines_executed
     reset_first_press_timer()
-    current_data = get_clipboard_text()
-    stripped_text = strip_newlines(current_data)
-    if stripped_text != current_data:
-        set_clipboard_text(stripped_text)
-        # print("Newlines removed from clipboard text.")
-        strip_newlines_executed = True
+    try:
+        current_data = get_clipboard_text()
+        stripped_text = strip_newlines(current_data)
+        if stripped_text != current_data:
+            set_clipboard_text(stripped_text)
+            logging.info("Newlines removed from clipboard text.")
+            strip_newlines_executed = True
+    except Exception as e:
+        logging.error(f"Error in perform_clipboard_action: {e}")
 
 
 def reset_first_press_timer():
@@ -145,11 +187,12 @@ def create_icon(image_name):
 
 
 def setup_tray_icon():
-    """Load your own image as icon"""
+    """Load your own image as icon and setup tray icon with menu"""
     icon_image = create_icon("ctrlcc.ico")
 
     # The menu that will appear when the user right-clicks the icon
     menu = (item('Toggle Start on Boot', toggle_startup, checked=lambda item: is_in_startup()),
+            item('View Logs', view_logs),
             item('Exit', exit_program),)
     icon = pystray.Icon("test_icon", icon_image, "CtrlC+C", menu)
     icon.run()
@@ -163,6 +206,10 @@ def exit_program(icon, item):
 
 
 if __name__ == "__main__":
+
+    log_filepath = get_log_file_path()
+    logging.basicConfig(filename=log_filepath, level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
 
     strip_newlines_attempted = False
     strip_newlines_executed = False
